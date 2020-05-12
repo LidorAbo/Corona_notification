@@ -1,19 +1,32 @@
-import time
+import json
+import getpass
 from datetime import datetime
 from email.mime.text import MIMEText
 import pytz
 import requests
 import smtplib
+import time
+
+sender_email = None
+password = None
+receiver_email = None
 
 
 def get_total_infected_by_country(state):
     url_summary = 'https://api.covid19api.com/summary'
     total_confirmed = None
-    countries = requests.get(url_summary).json()['Countries']
-    for country in countries:
+    response = requests.get(url_summary).json()
+    for country in response['Countries']:
         if country['Country'] == state:
             total_confirmed = country['TotalConfirmed']
     return total_confirmed
+
+
+def get_info():
+    global sender_email, password, receiver_email
+    sender_email = input("Please enter your email address: ")
+    password = getpass.getpass(prompt='Please enter password of ' + sender_email + ' email address: ')
+    receiver_email = input("Please insert receiver email address: ")
 
 
 subject_field = 'Subject'
@@ -25,9 +38,8 @@ smtp_port = 587
 my_country = 'Israel'
 number_of_seconds_in_minute = 60
 number_of_minutes = 10
-sender_email = 'testlidorabo@gmail.com'
-receiver_email = 'lidorabo2@gmail.com'
-password = 'Abo!0545719050'
+invalid_string = 'Invalid data...'
+get_info()
 while True:
     try:
         infected_people = get_total_infected_by_country(my_country)
@@ -51,4 +63,10 @@ while True:
                 "%d-%m-%Y %H:%M:%S") + " to " + msg[to_field])
         time.sleep(number_of_minutes * number_of_seconds_in_minute)
     except smtplib.SMTPException:
-        print("The sending mail is failed")
+        print(invalid_string)
+        get_info()
+    except json.decoder.JSONDecodeError:
+        print("Invalid response from corona API, trying to send GET request again...")
+    except (TypeError, AttributeError):
+        print(invalid_string)
+        get_info()
